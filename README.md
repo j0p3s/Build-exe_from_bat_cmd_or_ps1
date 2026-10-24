@@ -99,6 +99,24 @@ When you rebuild an existing EXE, the builder suggests its current version and o
 
 ## Things to know
 
+### Where `csc.exe` comes from
+
+On a normal Windows 10 or 11, `csc.exe` is already part of the .NET Framework runtime, in:
+
+```
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe
+C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe
+```
+
+So on most PCs nothing is installed. It is usually missing only on stripped-down Windows images (for example Tiny10 or other "lite" builds). On those, Windows may report that .NET Framework is already installed, so the Developer Pack installer does nothing — in that case the builder falls back to the portable Roslyn compiler, which is stored in `%LOCALAPPDATA%\RoslynCompiler` and reused next time.
+
+| Step | What it does | Needs |
+|---|---|---|
+| 1 | Uses the existing `csc.exe` | Nothing |
+| 2 | Enables the built-in .NET Framework 4 feature with DISM | UAC prompt |
+| 3 | Installs the [.NET Framework Developer Pack](https://dotnet.microsoft.com/en-us/download/dotnet-framework/net481) (4.8.1 on Windows 10 21H2 / build 19044 or newer, 4.8 on older builds), only if its Microsoft signature is valid | Internet, UAC prompt, maybe a restart |
+| 4 | Downloads the portable Microsoft Roslyn compiler from NuGet | Internet |
+
 ### `%~dp0` and `$PSScriptRoot` point to `%TEMP%`
 
 The script runs from a temporary folder, so `%~dp0` (batch) and `$PSScriptRoot` (PowerShell) point there — **not** to the folder the EXE is in. If your script needs files next to it, use the variables the EXE sets:
