@@ -11,7 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Build a self-contained `.exe` from a dropped `.bat`, `.cmd` or `.ps1` file.
 - Build several scripts at once by dropping them together.
 - Interactive mode: double-click and drag a script into the window.
-- Automatic use of the built-in .NET Framework C# compiler, with automatic download of the portable Microsoft Roslyn compiler from NuGet when it is missing.
+- Automatic use of the built-in .NET Framework C# compiler (`csc.exe`).
+- Automatic install when `csc.exe` is missing: enables the built-in .NET Framework 4 Windows feature, then installs the .NET Framework Developer Pack (4.8.1, or 4.8 on Windows 10 builds older than 21H2) after verifying its Microsoft signature, then falls back to the portable Microsoft Roslyn compiler from NuGet.
 - Prompt for UAC elevation (`asInvoker` or `requireAdministrator`).
 - Prompt for a version number, written to *File version* and *Product version*.
 - Prompt for an owner name, written to *Copyright* and *Company*.

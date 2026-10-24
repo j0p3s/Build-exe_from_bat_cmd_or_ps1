@@ -81,8 +81,63 @@ function Find-Csc {
     return $null
 }
 
+function Invoke-Elevated([string]$FilePath, [string]$Arguments) {
+    # Runs a program as administrator (UAC prompt) and returns its exit code
+    $p = Start-Process -FilePath $FilePath -ArgumentList $Arguments -Verb RunAs -Wait -PassThru
+    return $p.ExitCode
+}
+
+function Install-NetFramework {
+    $build   = [int](Get-CimInstance Win32_OperatingSystem).BuildNumber
+    $release = (Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -Name Release -ErrorAction SilentlyContinue).Release
+    Write-Host '[!] No C# compiler (csc.exe) found in the .NET Framework folder.' -ForegroundColor Yellow
+    Write-Host ("    Installed .NET Framework 4.x release: {0}" -f $(if ($release) { $release } else { 'none' })) -ForegroundColor Gray
+
+    # Step 1: enable the .NET Framework 4 feature that ships with Windows 10/11
+    Write-Host '[*] Enabling the built-in .NET Framework 4 Windows feature (UAC prompt)...' -ForegroundColor Cyan
+    try {
+        $rc = Invoke-Elevated (Join-Path $env:WINDIR 'System32\dism.exe') '/Online /Enable-Feature /FeatureName:NetFx4-AdvSrvs /All /NoRestart /Quiet'
+        Write-Host "    DISM exit code: $rc" -ForegroundColor Gray
+    } catch {
+        Write-Host "    Skipped: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+    if (Find-Csc) { return }
+
+    # Step 2: download and install the .NET Framework Developer Pack
+    #         4.8.1 needs Windows 10 21H2 (build 19044) or newer, older builds get 4.8
+    if ($build -ge 19044) { $ver = '4.8.1'; $url = 'https://go.microsoft.com/fwlink/?linkid=2203306' }
+    else                  { $ver = '4.8';   $url = 'https://go.microsoft.com/fwlink/?linkid=2088517' }
+    $setup = Join-Path $env:TEMP ('ndp{0}-devpack-enu.exe' -f $ver.Replace('.', ''))
+
+    try {
+        Write-Host "[*] Downloading .NET Framework $ver Developer Pack from Microsoft..." -ForegroundColor Cyan
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri $url -OutFile $setup -UseBasicParsing
+
+        $sig = Get-AuthenticodeSignature -FilePath $setup
+        if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+            throw 'The downloaded installer is not signed by Microsoft. It was not run.'
+        }
+
+        Write-Host "[*] Installing .NET Framework $ver Developer Pack (UAC prompt, this can take several minutes)..." -ForegroundColor Cyan
+        $rc = Invoke-Elevated $setup '/q /norestart'
+        switch ($rc) {
+            0       { Write-Host "[+] .NET Framework $ver Developer Pack installed." -ForegroundColor Green }
+            1641    { Write-Host "[+] Installed. A restart is required." -ForegroundColor Yellow }
+            3010    { Write-Host "[+] Installed. A restart is required to finish." -ForegroundColor Yellow }
+            1602    { Write-Host '[!] Installation was cancelled.' -ForegroundColor Yellow }
+            5100    { Write-Host '[!] This PC does not meet the requirements for this .NET Framework version.' -ForegroundColor Yellow }
+            default { Write-Host "[!] Installer ended with exit code $rc." -ForegroundColor Yellow }
+        }
+    } catch {
+        Write-Host "[!] .NET Framework install failed: $($_.Exception.Message)" -ForegroundColor Yellow
+    } finally {
+        Remove-Item -LiteralPath $setup -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Install-Roslyn {
-    Write-Host '[!] No C# compiler found on the system.' -ForegroundColor Yellow
+    Write-Host '[!] Still no C# compiler found.' -ForegroundColor Yellow
     Write-Host '[*] Downloading portable Microsoft Roslyn compiler from NuGet...' -ForegroundColor Cyan
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     $url = 'https://www.nuget.org/api/v2/package/Microsoft.Net.Compilers.Toolset/4.5.0'
@@ -177,8 +232,9 @@ try {
     # 3. Compiler
     Write-Host '[*] Checking for C# compiler (csc.exe)...' -ForegroundColor Gray
     $csc = Find-Csc
-    if (-not $csc) { Install-Roslyn; $csc = Find-Csc }
-    if (-not $csc) { throw 'Could not find or install csc.exe. Check your internet connection.' }
+    if (-not $csc) { Install-NetFramework; $csc = Find-Csc }
+    if (-not $csc) { Install-Roslyn;       $csc = Find-Csc }
+    if (-not $csc) { throw 'Could not find or install csc.exe. Check your internet connection, restart the PC and try again.' }
     Write-Host "[+] Using compiler: $csc" -ForegroundColor Green
 
     # 4. Generate sources. The script is embedded byte-for-byte as a resource,

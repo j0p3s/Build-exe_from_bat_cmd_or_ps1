@@ -12,7 +12,12 @@ No installs, no Visual Studio, no third-party tools. Just drag and drop.
 ## Features
 
 - **Drag and drop** one or more scripts onto `Build-exe.bat` — each one becomes `<name>.exe` next to the script.
-- **Works out of the box** — uses the C# compiler built into Windows (.NET Framework 4.x). If it is missing, it downloads the portable Microsoft Roslyn compiler from NuGet automatically.
+- **Installs what it needs** — uses the C# compiler (`csc.exe`) that comes with the .NET Framework 4.x built into Windows. If it is missing, it automatically:
+  1. enables the built-in .NET Framework 4 Windows feature (DISM),
+  2. downloads and installs the official **.NET Framework Developer Pack** from Microsoft (4.8.1 on Windows 10 21H2 or newer, 4.8 on older builds), after checking that the installer is signed by Microsoft,
+  3. as a last resort, downloads the portable Microsoft Roslyn compiler from NuGet.
+
+  Steps 1 and 2 show a UAC prompt, because installing .NET needs administrator rights.
 - **File properties** — asks for a **version number** and an **owner name**, and writes them to the EXE's *Properties → Details* tab (File version, Product version, Copyright).
 - **Optional UAC elevation** — choose whether the EXE asks for administrator rights when started.
 - **Your script is untouched** — it is embedded byte-for-byte, so its encoding (ANSI, UTF-8, with or without BOM, accented characters) stays exactly as it was.
@@ -24,7 +29,7 @@ No installs, no Visual Studio, no third-party tools. Just drag and drop.
 
 - Windows 10 or Windows 11
 - Windows PowerShell 5.1 (included with Windows 10/11)
-- Internet connection **only** if the built-in C# compiler is missing
+- Internet connection and administrator rights **only** if `csc.exe` is missing and .NET has to be installed (if the installer asks for a restart, restart and run `Build-exe.bat` again)
 
 ## Usage
 
