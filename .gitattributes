@@ -1,0 +1,8 @@
+# Batch and PowerShell files are stored with Windows (CRLF) line endings and never converted,
+# so the raw download from GitHub also has CRLF (cmd.exe can misparse labels with LF only)
+*.bat   -text
+*.cmd   -text
+*.ps1   -text
+
+*.md    text eol=lf
+*.exe   binary

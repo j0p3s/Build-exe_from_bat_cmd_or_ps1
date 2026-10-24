@@ -1,0 +1,10 @@
+# Build output
+*.exe
+
+# Batch-debug logs and temporary copies
+*.log
+__dbg_*
+
+# Windows
+Thumbs.db
+desktop.ini
