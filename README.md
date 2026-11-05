@@ -157,3 +157,6 @@ To debug `Build-exe.bat` itself, or the scripts you build, you can use [Batch-de
 ## License
 
 [MIT](LICENSE)
+
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/j0p3s)
